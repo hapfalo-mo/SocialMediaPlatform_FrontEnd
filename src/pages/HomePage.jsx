@@ -17,6 +17,9 @@ const HomePage = () => {
     const [body, setBody] = useState('');
     const [isPostCreating, setIsPostCreating] = useState(false);
     const [postList, setPostList] = useState([]);
+    const [hintFriendList, setHintFriendList] = useState([]);
+    const [checkPostLiked, setCheckPostLiked] = useState({});
+    const [currentUser, setCurrentUser] = useState(null);
     // Handle Image Change
     const handleImageChange = async (e) => {
         if (e.target.files[0]) {
@@ -78,166 +81,303 @@ const HomePage = () => {
         try {
             const response = await api.getAllPost();
             if (response) {
-                console.log(response);
-                setPostList(response?.value);
                 console.log(response?.postResponseDTO.value);
-                console.log("Get All Post Success");
+                setPostList(response?.postResponseDTO.value);
             }
         } catch (error) {
             console.error("Get All Post Fail");
             console.log(error);
         }
     }
+    // Get All User
+    const getAllUser = async () => {
+        try {
+            const tokenPath = localStorage.getItem("token");
+            const decoded = jwtDecode(tokenPath);
+            const userId = decoded?.UsereId;
+            const response = await api.getAllUser(userId);
+            if (response) {
+                console.log(response?.value);
+                setHintFriendList(response?.value);
+            }
+        } catch (error) {
+            console.error("Get All User Fail");
+            console.log(error);
+        }
+    }
+    // Check Post Like 
+    const checkPostLike = async (postId) => {
+        try {
+            const tokenPath = localStorage.getItem("token");
+            const decoded = jwtDecode(tokenPath);
+            const userId = decoded?.UserId;
+            const response = await api.checkLikeAction(postId, userId);
+
+            if (response?.value === "true") {
+                setCheckPostLiked((prevLikedPosts) => ({
+                    ...prevLikedPosts,
+                    [postId]: true,
+                }));
+            } else {
+                setCheckPostLiked((prevLikedPosts) => ({
+                    ...prevLikedPosts,
+                    [postId]: false,
+                }));
+            }
+        } catch (error) {
+            console.error("Check Post Like Fail", error);
+        }
+    };
+    // Hanle Like Action 
+    const handleLikeAction = async (postId) => {
+        try {
+            const tokenPath = localStorage.getItem("token");
+            const decoded = jwtDecode(tokenPath);
+            const userId = decoded?.UsereId;
+            const response = await api.LikeAction(postId, userId);
+            if (response) {
+                setCheckPostLiked((prevLikedPosts) => ({
+                    ...prevLikedPosts,
+                    [postId]: !prevLikedPosts[postId],
+                }));
+            }
+        } catch (Err) {
+            console.log(Err)
+        }
+    }
+    useEffect(() => {
+        const fetchUser = async () => {
+            const tokenPath = localStorage.getItem("token");
+            if (!tokenPath) {
+                setCurrentUser(null);
+                return;
+            }
+            const decoded = jwtDecode(tokenPath);
+            const userId = decoded?.UsereId;
+            if (userId) {
+                try {
+                    const response = await api.getUserById(userId);
+                    if (response) {
+                        console.log("User fetched:", response);
+                        setCurrentUser(response?.data.value);
+                    }
+                } catch (error) {
+                    console.error("Get User By ID failed", error);
+                }
+            } else {
+                setCurrentUser(null);
+            }
+        };
+        fetchUser();
+        const handleStoreChange = (event) => {
+            if (event.key === "token") {
+                fetchUser();
+            }
+        };
+        window.addEventListener("storage", handleStoreChange);
+        return () => {
+            window.removeEventListener("storage", handleStoreChange);
+        };
+    }, []);
+
     useEffect(() => {
         getAllPost();
+        getAllUser();
+    }, []);
+    useEffect(() => {
+        const fetchAllLikes = async () => {
+            const tokenPath = localStorage.getItem("token");
+            const decoded = jwtDecode(tokenPath);
+            console.log(decoded);
+            const userId = decoded?.UsereId;
+            console.log(userId);
+            const likedStatuses = {};
+            for (const post of postList) {
+                try {
+                    const response = await api.checkLikeAction(post?.postId, userId);
+                    console.log(response?.data);
+                    likedStatuses[post.postId] = response?.data === true;
+                    console.log(`Post ID: ${post.postId}, Liked: ${likedStatuses[post.postId]}`);
+                } catch (error) {
+                    console.error(`Failed to check like for post ${post?.postId}`, error);
+                    likedStatuses[post.postId] = false;
+                }
+            }
+            setCheckPostLiked(likedStatuses);
+        };
+        if (postList.length > 0) {
+            fetchAllLikes();
+        }
     }, [postList]);
+    // Resolve time 
+    const changeTimeType = (time) => {
+        const vietnamTimeoff = 7 * 60;
+        const saveTime = new Date(time);
+        const currentTime = new Date();
+        const vietnamCurrentDate = new Date(currentTime.getTime() + (vietnamTimeoff - currentTime.getTimezoneOffset()) * 60 * 1000);
+        const diffinMinutes = vietnamCurrentDate - saveTime;
+        const diffinHours = Math.floor(diffinMinutes / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffinMinutes / (1000 * 60 * 60 * 24));
+        const diffWeeks = Math.floor(diffinMinutes / (1000 * 60 * 60 * 24 * 7));
+        const diffYears = Math.floor(diffinMinutes / (1000 * 60 * 60 * 24 * 365));
+        const formatter = new Intl.RelativeTimeFormat('vi', { numeric: "auto" });
+        if (diffinHours < 24) {
+            return formatter.format(-diffinHours, 'hours');
+        } else if (diffDays < 7) {
+            return formatter.format(-diffDays, 'days');
+        } else if (diffWeeks < 4) {
+            return formatter.format(-diffWeeks, 'weeks');
+        } else {
+            return formatter.format(-diffYears, 'years');
+        }
+
+    }
     return (
         <div className="flex w-full h-screen gap-6">
             {/* Column 1 content */}
-            <div className="w-[25%] p-4 bg-white max-h-[95vh] sticky top-0 rounded-xl">
-                <div className="w-full">
-                    <div className=" w-full flex flex-col items-center justify-center gap-8">
-                        <img src={men} alt="User Avatar" className="w-32 h-32 rounded-full" />
-                        <h1 className="text-2xl font-bold text-baseText">@chuongnguyen16112002</h1>
-                        {/* Favorite site */}
-                        <div className=" w-full flex">
-                            <dl className="w-full flex items-center justify-center gap-10">
-                                <div className=" w-[40%] flex flex-col justify-center items-center gap-2">
-                                    <dt className="text-2xl font-bold text-blue-700">12K</dt>
-                                    <dd className="text-sm text-baseText">Người theo dõi</dd>
+            {currentUser && (
+                <div className="w-[25%] p-4 bg-white max-h-[95vh] sticky top-0 rounded-xl">
+                    <div className="w-full">
+                        <div className=" w-full flex flex-col items-center justify-center gap-8">
+                            <img src={currentUser?.avatarUrl} alt="User Avatar" className="w-32 h-32 rounded-full" />
+                            <h1 className="text-2xl font-bold text-baseText">@{currentUser?.username}
+                                <span className="pl-2">
+                                    {currentUser?.gentle === 0 && <i className="fa-solid fa-mars text-blue-600"></i>}
+                                    {currentUser?.gentle === 1 && <i className="fa-solid fa-venus text-pink-600"></i>}
+                                    {currentUser?.gentle === 2 && <i className="fa-solid fa-genderless text-gray-600"></i>}
+                                </span>
+                            </h1>
+                            {/* Favorite site */}
+                            <div className=" w-full flex">
+                                <dl className="w-full flex items-center justify-center gap-10">
+                                    <div className=" w-[40%] flex flex-col justify-center items-center gap-2">
+                                        <dt className="text-2xl font-bold text-blue-700">12K</dt>
+                                        <dd className="text-sm text-baseText">Người theo dõi</dd>
+                                    </div>
+                                    <div className=" w-[35%] flex flex-col justify-center items-center gap-2">
+                                        <dt className="text-2xl font-bold text-blue-700">900</dt>
+                                        <dd className="text-sm text-baseText">Đang theo dõi</dd>
+                                    </div>
+                                    <div className=" w-[25%] flex flex-col justify-center items-center gap-2">
+                                        <dt className="text-2xl font-bold text-blue-700">12</dt>
+                                        <dd className="text-sm text-baseText">Bài đăng</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                            {/* Favorite Site */}
+                            <div className="flex flex-col w-full gap-5 h-auto mt-3">
+                                <div className="flex w-full items-center justify-between">
+                                    <h1 className="text-xl font-bold flex text-black-200">Sở thích</h1>
+                                    <i className="fas fa-ellipsis-h text-black-700 mr-2"></i>
                                 </div>
-                                <div className=" w-[35%] flex flex-col justify-center items-center gap-2">
-                                    <dt className="text-2xl font-bold text-blue-700">900</dt>
-                                    <dd className="text-sm text-baseText">Đang theo dõi</dd>
+                                <div>
+                                    <ul className=" flex flex-wrap gap-2 *:rounded-full *:border *:border-sky-100 *:bg-sky-50 *:px-2 *:py-0.5 dark:text-blue-300 *:text-blue-400 dark:*:border-sky-500/15 dark:*:bg-sky-500/10">
+                                        <li>Công nghệ</li>
+                                        <li>Thiết kế</li>
+                                        <li>Sales</li>
+                                        <li>Marketing</li>
+                                        <li>UX/UI</li>
+                                    </ul>
                                 </div>
-                                <div className=" w-[25%] flex flex-col justify-center items-center gap-2">
-                                    <dt className="text-2xl font-bold text-blue-700">12</dt>
-                                    <dd className="text-sm text-baseText">Bài đăng</dd>
+                            </div>
+                            {/* Create New Porfolio */}
+                            <div className="flex flex-col w-full gap-5 h-auto mt-3">
+                                <div className="flex w-full items-center justify-between">
+                                    <h1 className="text-xl font-bold flex text-black-200">Bài đăng</h1>
+                                    <i className="fas fa-ellipsis-h text-black-700 mr-2"></i>
                                 </div>
-                            </dl>
+                                <div className="px-5">
+                                    <img src={imgCol1} alt="" className="w-full h-60 bg-blue-600 rounded-2xl" />
+                                </div>
+                            </div>
+                            <button onClick={setIsPostModalOpen} className="relative inline-flex items-center justify-center mb-2 me-2 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-cyan-500 to-blue-500 group-hover:from-cyan-500 group-hover:to-blue-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-cyan-200 dark:focus:ring-cyan-800 p-0 border border-blue-600">
+                                <span className="relative px-5 py-2.5 transition-all ease-in duration-75 bg-white dark:bg-gray-900 rounded-md group-hover:bg-opacity-0 group-hover:text-white text-blue-600 font-bold">
+                                    <i className="fas fa-plus mr-2"></i>
+                                    Thêm bài đăng
+                                </span>
+                            </button>
+                            {/* Post Create Form */}
                         </div>
-                        {/* Favorite Site */}
-                        <div className="flex flex-col w-full gap-5 h-auto mt-3">
-                            <div className="flex w-full items-center justify-between">
-                                <h1 className="text-xl font-bold flex text-black-200">Sở thích</h1>
-                                <i className="fas fa-ellipsis-h text-black-700 mr-2"></i>
-                            </div>
-                            <div>
-                                <ul className=" flex flex-wrap gap-2 *:rounded-full *:border *:border-sky-100 *:bg-sky-50 *:px-2 *:py-0.5 dark:text-blue-300 *:text-blue-400 dark:*:border-sky-500/15 dark:*:bg-sky-500/10">
-                                    <li>Công nghệ</li>
-                                    <li>Thiết kế</li>
-                                    <li>Sales</li>
-                                    <li>Marketing</li>
-                                    <li>UX/UI</li>
-                                </ul>
-                            </div>
-                        </div>
-                        {/* Create New Porfolio */}
-                        <div className="flex flex-col w-full gap-5 h-auto mt-3">
-                            <div className="flex w-full items-center justify-between">
-                                <h1 className="text-xl font-bold flex text-black-200">Bài đăng</h1>
-                                <i className="fas fa-ellipsis-h text-black-700 mr-2"></i>
-                            </div>
-                            <div className="px-5">
-                                <img src={imgCol1} alt="" className="w-full h-60 bg-blue-600 rounded-2xl" />
-                            </div>
-                        </div>
-                        <button onClick={setIsPostModalOpen} className="relative inline-flex items-center justify-center mb-2 me-2 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-cyan-500 to-blue-500 group-hover:from-cyan-500 group-hover:to-blue-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-cyan-200 dark:focus:ring-cyan-800 p-0 border border-blue-600">
-                            <span className="relative px-5 py-2.5 transition-all ease-in duration-75 bg-white dark:bg-gray-900 rounded-md group-hover:bg-opacity-0 group-hover:text-white text-blue-600 font-bold">
-                                <i className="fas fa-plus mr-2"></i>
-                                Thêm bài đăng
-                            </span>
-                        </button>
-                        {/* Post Create Form */}
                     </div>
                 </div>
-            </div>
+            )}
             {/* Column 2 content */}
             <div className="w-[50%] p-4 bg-white rounded-xl bg-[#f7f7f7]">
                 <div className="flex flex-col gap-5 mt-3 items-start">
                     <h1 className="text-black font-bold text-xl">Bạn có thể quan tâm</h1>
                     {/* Hint Friend Site */}
                     <div className=" w-full flex gap-8 pb-10 border-b border-gray-300">
-                        <div className="flex flex-col gap-4">
-                            <img src={woman} alt="User Avatar" className="w-20 h-20 rounded-full" />
-                            <h1 className="text-baseText font-bold">@daotdck</h1>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            <img src={woman} alt="User Avatar" className="w-20 h-20 rounded-full" />
-                            <h1 className="text-baseText font-bold">@daotdck</h1>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            <img src={woman} alt="User Avatar" className="w-20 h-20 rounded-full" />
-                            <h1 className="text-baseText font-bold">@daotdck</h1>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            <img src={woman} alt="User Avatar" className="w-20 h-20 rounded-full" />
-                            <h1 className="text-baseText font-bold">@daotdck</h1>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            <img src={woman} alt="User Avatar" className="w-20 h-20 rounded-full" />
-                            <h1 className="text-baseText font-bold">@daotdck</h1>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            <img src={woman} alt="User Avatar" className="w-20 h-20 rounded-full" />
-                            <h1 className="text-baseText font-bold">@daotdck</h1>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            <img src={woman} alt="User Avatar" className="w-20 h-20 rounded-full" />
-                            <h1 className="text-baseText font-bold">@daotdck</h1>
-                        </div>
+                        {hintFriendList?.map((friend, index) => (
+                            <div key={index} className="flex flex-col gap-4 hover:pointer">
+                                <img src={friend?.avatarUrl} alt="User Avatar" className="w-16 h-16 rounded-full object-cover border-2 border-solid border-blue-400" />
+                                <h1 className="text-baseText font-bold">@{friend?.username}</h1>
+                            </div>
+                        ))}
                     </div>
-                    {/* Post Site */}
-                    <div className="w-full flex flex-col gap-5 !bg-white rounded-2xl">
-                        {/* Header */}
-                        <div className="w-full flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <img src={men} alt="" className="w-16 h-16 rounded-full" />
-                                <div className="flex flex-col items-start">
-                                    <h4 className="font-bold">Nguyen Quoc Huy Chuong</h4>
-                                    <p className="text-baseText">1 giờ trước</p>
-                                    <p className="text-baseText">Nội dung: <span></span></p>
+                    <div className="w-full flex flex-col justify-center items-center gap-10  ">
+                        {/* Post Site */}
+                        {postList?.map((post) => (
+                            <div key={post?.postId} className="w-full flex flex-col gap-5 !bg-white rounded-2xl p-5">
+                                {/* Header */}
+                                <div className="w-full flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <img src={post?.avatar_Url} alt="" className="w-16 h-16 rounded-full object-cover" />
+                                        <div className="flex flex-col items-start">
+                                            <h4 className="font-bold">{post?.fullName || "Nguyen Quoc Huy Chuong"}</h4>
+                                            <p className="text-baseText">{changeTimeType(post?.createAt)}</p>
+                                            <p className="text-baseText">Nội dung: <span className="text-blue-600 font-bold">{post?.title}</span></p>
+                                        </div>
+                                    </div>
+                                    <i className="fas fa-ellipsis-h text-black-700 mr-2 text-xl"></i>
+                                </div>
+                                <div className="w-full flex">
+                                    <p className="text-left text-baseText">{post?.body}</p>
+                                </div>
+                                {/* Image + Action */}
+                                <div className="flex flex-col gap-2 justify-center items-center">
+                                    {/* Image */}
+                                    <div className="w-full flex justify-center">
+                                        <img src={post?.imgURL} alt="" className=" w-[90%] h-auto rounded-2xl" />
+                                    </div>
+                                    {/* Interact Data */}
+                                    <div className=" w-[90%] flex justify-between items-center space-x-4">
+                                        <p className="text-baseText">{post?.totalLike} lượt thích</p>
+                                        <p className="text-baseText">{post?.totalComment} bình luận</p>
+                                    </div>
+                                    {/* Action */}
+                                    <div className="w-full flex justify-center">
+                                        <div className="w-[90%] flex justify-start space-x-4">
+                                            {/* Like Icon */}
+                                            <div onClick={() => handleLikeAction(post?.postId)} className="flex items-center justify-center w-10 h-10 rounded-full cursor-pointer">
+                                                {checkPostLiked[post?.postId] === true ? (
+                                                    <i className="fa-solid fa-heart text-2xl text-red-500 transition-colors duration-200"></i>
+                                                ) : (
+                                                    <i className="fa-regular fa-heart text-2xl text-black transition-colors duration-200 hover:text-red-500"></i>
+                                                )}
+                                            </div>
+                                            {/* Comment Icon */}
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-full">
+                                                <i className="fa-regular fa-comment text-2xl"></i>
+                                            </div>
+                                            {/* Message Icon */}
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-full">
+                                                <i className="fa-regular fa-message text-2xl"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Mutual Comment */}
+                                {/* Your Comment */}
+                                <div className="w-full space-x-4">
+                                    <div className="flex items-center gap-3">
+                                        <img src={post?.avatar_Url} alt="" className="h-12 w-12 rounded-full" />
+                                        <div className="w-[90%]">
+                                            <input className="border border-soid border-gray-300 p-3 w-full rounded-xl" type="text" placeholder="Để lại bình luận của bạn" />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <i className="fas fa-ellipsis-h text-black-700 mr-2 text-xl"></i>
-                        </div>
-                        <div className="w-full flex">
-                            <p className="text-left text-baseText">Lorem ipsum dolor sit amet consectetur adipisicing elit. Tempore eaque consectetur, fugit repudiandae aperiam itaque eligendi eos saepe qui, odio, cum expedita quae numquam autem illum tempora eum corporis adipisci.</p>
-                        </div>
-                        {/* Image + Action */}
-                        <div className="flex flex-col gap-1">
-                            {/* Image */}
-                            <div className="w-full flex justify-center">
-                                <img src={imgCol1} alt="" className=" w-[90%] h-96 rounded-2xl" />
-                            </div>
-                            {/* Action */}
-                            <div className="w-full flex justify-center">
-                                <div className="w-[90%] flex justify-start space-x-4">
-                                    {/* Like Icon */}
-                                    <div className="flex items-center justify-center w-10 h-10 rounded-full">
-                                        <i className="fa-regular fa-heart text-2xl" aria-hidden="true"></i>
-                                    </div>
-                                    {/* Comment Icon */}
-                                    <div className="flex items-center justify-center w-10 h-10 rounded-full">
-                                        <i className="fa-regular fa-comment text-2xl"></i>
-                                    </div>
-                                    {/* Message Icon */}
-                                    <div className="flex items-center justify-center w-10 h-10 rounded-full">
-                                        <i className="fa-regular fa-message text-2xl"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {/* Mutual Comment */}
-                        {/* Your Comment */}
-                        <div className="w-full space-x-4">
-                            <div className="flex items-center gap-3">
-                                <img src={men} alt="" className="h-12 w-12 rounded-full" />
-                                <div className="w-[90%]">
-                                    <input className="border border-soid border-gray-300 p-3 w-full rounded-xl" type="text" placeholder="Để lại bình luận của bạn" />
-                                </div>
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
             </div>
