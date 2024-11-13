@@ -18,6 +18,20 @@ export const login = async ({ username, password }) => {
     }
 };
 
+// Signup Function 
+export const signup = async (data) => {
+    try {
+        const response = await axios.post("https://localhost:7118/api/User/signup", data, {
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.log("Signup Fail:", error);
+        throw error;
+    }
+}
 //  Create New Post 
 export const creatNewPost = async (userId, title, body, imgUrl) => {
     try {
@@ -97,3 +111,91 @@ export const getUserById = async (id) => {
         throw error;
     }
 };
+
+// Get All Unregistered Favorite 
+export const getAllUnregisteredFavorite = async (registeredId) => {
+    try {
+        const response = await api.get(`https://localhost:7118/api/Favorite/get-all-favorite-except/${registeredId}`);
+        return response.data
+    } catch (err) {
+        console.log("Get All Unregistered Favorite Fail:", err);
+        throw err;
+    }
+};
+
+// Save Registered favorite By User
+export const saveRegisteredFavor = async (userId, favoriteIds) => {
+    try {
+        const response = await api.post(`https://localhost:7118/api/Favorite/add-favorite-by-list/`, favoriteIds,
+            {
+                params: { userid: userId },
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }
+        );
+        return response;
+    } catch (err) {
+        console.log("Save Registered Favorite Fail:", err);
+        throw err;
+    }
+};
+
+// Get All Registered Favorite By User 
+export const getAllRegisteredFavorite = async (userId) => {
+    try {
+        const response = await api.get(`https://localhost:7118/api/Favorite/get-all-user-favorite/${userId}`);
+        return response.data;
+    } catch (err) {
+        console.log("Get All Registered Favorite Fail:", err);
+        throw err;
+    }
+}
+
+// Follow User 
+export const followUser = async (followerId, followedId) => {
+    try {
+        const response = await api.post(`https://localhost:7118/api/FollowAction/follow-action/${followerId}/${followedId}`);
+        return response;
+    } catch (err) {
+        console.log("Follow User Fail:", err);
+        throw err;
+    }
+}
+
+// Check Follow User
+export const checkFollowUser = async (followerId, followedId) => {
+    try {
+        const response = await api.get(`https://localhost:7118/api/FollowAction/check-followed/${followerId}/${followedId}`);
+        return response;
+    } catch (err) {
+        console.log("Check Follow User Fail:", err);
+        throw err;
+    }
+}
+
+// Get Comment By CommentId 
+export const getCommentByPostId = async (postId) => {
+    try {
+        const response = await api.get(`https://localhost:7118/api/Comment/get-comment-by-postId?postId=${postId}`);
+        return response;
+    } catch (err) {
+        console.log("Get Comment By CommentId Fail:", err);
+        throw err;
+    }
+}
+
+// create Comment 
+export const createComment = async (data) => {
+    try {
+        const response = await api.post(`https://localhost:7118/api/Comment/create-comment`, data, {
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        return response;
+    } catch (err) {
+        console.log("Create Comment Fail:", err);
+        throw err;
+    }
+}

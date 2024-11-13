@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 const SignupPage = () => {
-
+    const [isErrorModal, setIsErrorModal] = useState(false);
     return (
         <section className="w-full h-full">
             <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
@@ -28,7 +28,12 @@ const SignupPage = () => {
                             </div>
                             <div>
                                 <label htmlFor="address" className="flex block mb-2 text-sm font-medium text-blue-900 dark:text-white"> Thêm địa chỉ nhà</label>
-                                <input type="text" name="address" id="address" className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required=""></input>
+                                <input type="text" name="address" id="address" placeholder="Nhập địa chỉ..."
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required=""></input>
+                            </div><div>
+                                <label htmlFor="address" className="flex block mb-2 text-sm font-medium text-blue-900 dark:text-white"> Giới thiệu bản thân </label>
+                                <input type="text" name="introduction" id="introduction" placeholder="Nhâp một đoạn giới thiệu về chính bạn.."
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required=""></input>
                             </div>
                             <form className=" max-w-sm mx-auto">
                                 <label htmlFor="countries" className="flex block mb-2 text-sm font-medium text-blue-900 dark:text-white">Chọn giới tính</label>
