@@ -29,17 +29,41 @@ const HomePage = () => {
     const [hoveredUserData, setHoveredUserData] = useState(null);
     const [followedStatus, setFollowedStatus] = useState({});
     const [commentList, setCommentList] = useState([]);
-    const [isResponseSite, setIsResponseSite] = useState(false);
+    // const [isResponseSite, setIsResponseSite] = useState(false);
     const [replyTo, setReplyTo] = useState('');
     const [commentText, setCommentText] = useState('');
     const [ParrentId, setParrentId] = useState(null);
     const [isCommentMutal, setIsCommentMutal] = useState({});
+    // Fetch Current User
+    const fetchUser = async () => {
+        const tokenPath = localStorage.getItem("token");
+        if (!tokenPath) {
+            setCurrentUser(null);
+            return;
+        }
+        const decoded = jwtDecode(tokenPath);
+        const userId = decoded?.UsereId;
+        if (userId) {
+            try {
+                const response = await api.getUserById(userId);
+                if (response) {
+                    console.log("User fetched:", response);
+                    setCurrentUser(response?.data.value);
+                }
+            } catch (error) {
+                console.error("Get User By ID failed", error);
+            }
+        } else {
+            setCurrentUser(null);
+        }
+    };
+
     // Handle Image Change
     const handleImageChange = async (e) => {
         if (e.target.files[0]) {
             setImagePreview(e.target.files[0]);
         }
-    }
+    };
     const handleUploadImage = async () => {
         if (imagePreview) {
             return new Promise((resolve, reject) => {
@@ -204,28 +228,6 @@ const HomePage = () => {
             console.error("Get User By ID Fail", error);
         }
     }
-    const fetchUser = async () => {
-        const tokenPath = localStorage.getItem("token");
-        if (!tokenPath) {
-            setCurrentUser(null);
-            return;
-        }
-        const decoded = jwtDecode(tokenPath);
-        const userId = decoded?.UsereId;
-        if (userId) {
-            try {
-                const response = await api.getUserById(userId);
-                if (response) {
-                    console.log("User fetched:", response);
-                    setCurrentUser(response?.data.value);
-                }
-            } catch (error) {
-                console.error("Get User By ID failed", error);
-            }
-        } else {
-            setCurrentUser(null);
-        }
-    };
     // Get All Comment By Post Id 
     const getAllCommentByPostId = async (postId) => {
         try {
@@ -260,7 +262,6 @@ const HomePage = () => {
             console.error("Fetch Comment For Each Post Fail", error);
         }
     }
-
     // Create Comment 
     const createComment = async (content, createBy, postId, ParrentId) => {
         try {
@@ -283,106 +284,6 @@ const HomePage = () => {
             console.log("Create Comment Fail:", error);
         }
     }
-    useEffect(() => {
-        if (postList.length > 0) {
-            fetchCommentForEachPost();
-        }
-    }, [postList]);
-    useEffect(() => {
-        console.log("Updated Comment List:", commentList);
-    }, [commentList]);
-
-    useEffect(() => {
-        fetchUser();
-        const handleStoreChange = (event) => {
-            if (event.key === "token") {
-                fetchUser();
-            }
-        };
-        window.addEventListener("storage", handleStoreChange);
-        window.addEventListener("userUpdated", fetchUser);
-
-        return () => {
-            window.removeEventListener("storage", handleStoreChange);
-            window.addEventListener("userUpdated", fetchUser);
-        };
-    }, []);
-
-    useEffect(() => {
-        getAllPost();
-    }, []);
-
-    useEffect(() => {
-        getAllUser();
-    }, []);
-
-    useEffect(() => {
-        getUnRegisteredFavorite();
-    }, []);
-
-    useEffect(() => {
-        getRegisteredFavorite();
-    }, []);
-
-    useEffect(() => {
-        const fetchAllLikes = async () => {
-            const tokenPath = localStorage.getItem("token");
-            const decoded = jwtDecode(tokenPath);
-            console.log(decoded);
-            const userId = decoded?.UsereId;
-            console.log(userId);
-            const likedStatuses = {};
-            for (const post of postList) {
-                try {
-                    const response = await api.checkLikeAction(post?.postId, userId);
-                    console.log(response?.data);
-                    likedStatuses[post.postId] = response?.data === true;
-                    console.log(`Post ID: ${post.postId}, Liked: ${likedStatuses[post.postId]}`);
-                } catch (error) {
-                    console.error(`Failed to check like for post ${post?.postId}`, error);
-                    likedStatuses[post.postId] = false;
-                }
-            }
-            setCheckPostLiked(likedStatuses);
-        };
-        if (postList.length > 0) {
-            fetchAllLikes();
-        }
-    }, [postList]);
-    // Resolve time 
-    const changeTimeType = (time) => {
-        const saveTime = new Date(time); // Convert the saved time to a Date object
-        const currentTime = new Date(); // Get the current time
-
-        // Calculate the difference in milliseconds
-        const diffInMilliseconds = currentTime - saveTime;
-
-        // Calculate time differences in various units
-        const diffInSeconds = Math.floor(diffInMilliseconds / 1000);
-        const diffInMinutes = Math.floor(diffInSeconds / 60);
-        const diffInHours = Math.floor(diffInMinutes / 60);
-        const diffInDays = Math.floor(diffInHours / 24);
-        const diffInWeeks = Math.floor(diffInDays / 7);
-        const diffInMonths = Math.floor(diffInDays / 30);
-        const diffInYears = Math.floor(diffInDays / 365);
-        const formatter = new Intl.RelativeTimeFormat('vi', { numeric: "auto" });
-        if (diffInSeconds < 60) {
-            return formatter.format(-diffInSeconds, 'seconds');
-        } else if (diffInMinutes < 60) {
-            return formatter.format(-diffInMinutes, 'minutes');
-        } else if (diffInHours < 24) {
-            return formatter.format(-diffInHours, 'hours');
-        } else if (diffInDays < 7) {
-            return formatter.format(-diffInDays, 'days');
-        } else if (diffInWeeks < 4) {
-            return formatter.format(-diffInWeeks, 'weeks');
-        } else if (diffInMonths < 12) {
-            return formatter.format(-diffInMonths, 'months');
-        } else {
-            return formatter.format(-diffInYears, 'years');
-        }
-    };
-
     // Toggle selected state for a favorite
     const toggleFavorite = (favoriteId) => {
         setSelectedFavorites((prevSelected) =>
@@ -449,21 +350,126 @@ const HomePage = () => {
             console.error("Check Followed User Fail", error);
         }
     }
-    // Check 
-    useEffect(() => {
-        for (const friend of hintFriendList) {
-            checkFollowedUser(friend.userId);
-        }
-    }, [hintFriendList]);
-
     // Function to handle reply click
     const handleReplyClick = (userName, postId) => {
         setParrentId(postId);
         setReplyTo(userName);
         setCommentText(`@${userName}`);
     };
+    // Logout Function 
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        navigate("/");
+    }
+    // Update Site
+    useEffect(() => {
+        if (postList.length > 0) {
+            fetchCommentForEachPost();
+        }
+    }, [postList]);
+    useEffect(() => {
+        console.log("Updated Comment List:", commentList);
+    }, [commentList]);
 
-    //  Render Comments 
+    useEffect(() => {
+        fetchUser();
+        const handleStoreChange = (event) => {
+            if (event.key === "token") {
+                fetchUser();
+            }
+        };
+        window.addEventListener("storage", handleStoreChange);
+        window.addEventListener("userUpdated", fetchUser);
+
+        return () => {
+            window.removeEventListener("storage", handleStoreChange);
+            window.addEventListener("userUpdated", fetchUser);
+        };
+    }, []);
+
+    useEffect(() => {
+        getAllPost();
+    }, []);
+
+    useEffect(() => {
+        getAllUser();
+    }, []);
+
+    useEffect(() => {
+        getUnRegisteredFavorite();
+    }, []);
+
+    useEffect(() => {
+        getRegisteredFavorite();
+    }, []);
+
+    useEffect(() => {
+        const fetchAllLikes = async () => {
+            const tokenPath = localStorage.getItem("token");
+            const decoded = jwtDecode(tokenPath);
+            console.log(decoded);
+            const userId = decoded?.UsereId;
+            console.log(userId);
+            const likedStatuses = {};
+            for (const post of postList) {
+                try {
+                    const response = await api.checkLikeAction(post?.postId, userId);
+                    console.log(response?.data);
+                    likedStatuses[post.postId] = response?.data === true;
+                    console.log(`Post ID: ${post.postId}, Liked: ${likedStatuses[post.postId]}`);
+                } catch (error) {
+                    console.error(`Failed to check like for post ${post?.postId}`, error);
+                    likedStatuses[post.postId] = false;
+                }
+            }
+            setCheckPostLiked(likedStatuses);
+        };
+        if (postList.length > 0) {
+            fetchAllLikes();
+        }
+    }, [postList]);
+
+    useEffect(() => {
+        for (const friend of hintFriendList) {
+            checkFollowedUser(friend.userId);
+        }
+    }, [hintFriendList]);
+
+    // Resolve time 
+    const changeTimeType = (time) => {
+        const saveTime = new Date(time); // Convert the saved time to a Date object
+        const currentTime = new Date(); // Get the current time
+
+        // Calculate the difference in milliseconds
+        const diffInMilliseconds = currentTime - saveTime;
+
+        // Calculate time differences in various units
+        const diffInSeconds = Math.floor(diffInMilliseconds / 1000);
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        const diffInDays = Math.floor(diffInHours / 24);
+        const diffInWeeks = Math.floor(diffInDays / 7);
+        const diffInMonths = Math.floor(diffInDays / 30);
+        const diffInYears = Math.floor(diffInDays / 365);
+        const formatter = new Intl.RelativeTimeFormat('vi', { numeric: "auto" });
+        if (diffInSeconds < 60) {
+            return formatter.format(-diffInSeconds, 'seconds');
+        } else if (diffInMinutes < 60) {
+            return formatter.format(-diffInMinutes, 'minutes');
+        } else if (diffInHours < 24) {
+            return formatter.format(-diffInHours, 'hours');
+        } else if (diffInDays < 7) {
+            return formatter.format(-diffInDays, 'days');
+        } else if (diffInWeeks < 4) {
+            return formatter.format(-diffInWeeks, 'weeks');
+        } else if (diffInMonths < 12) {
+            return formatter.format(-diffInMonths, 'months');
+        } else {
+            return formatter.format(-diffInYears, 'years');
+        }
+    };
+
+    // Render Comment Site 
     const renderComments = (comments, level = 0) => {
         console.log("Rendering level:", level, "with comments:", comments);
         return comments.map((comment) => (
@@ -493,11 +499,6 @@ const HomePage = () => {
         ));
     }
 
-    // Logout Function 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        navigate("/");
-    }
     return (
         <div className="flex w-full h-screen gap-6">
             {/* Column 1 content */}
@@ -689,7 +690,7 @@ const HomePage = () => {
                                         <div className="flex items-center gap-4">
                                             <img src={post?.avatar_Url} alt="" className="w-16 h-16 rounded-full object-cover" />
                                             <div className="flex flex-col items-start">
-                                                <h4 className="font-bold">{post?.Username || "Nguyen Quoc Huy Chuong"}</h4>
+                                                <h4 className="font-bold">{post?.username || "Nguyen Quoc Huy Chuong"}</h4>
                                                 <p className="text-baseText">{changeTimeType(post?.createAt)}</p>
                                                 <p className="text-baseText">Nội dung: <span className="text-blue-600 font-bold">{post?.title}</span></p>
                                             </div>
