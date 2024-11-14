@@ -8,25 +8,54 @@ const LoginPage = () => {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [isErrorModal, setIsErrorModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
     // Handle Login
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const parrams = {
+            const params = {
                 username: username,
                 password: password
-            }
-            const response = await UserAPI.login(parrams);
+            };
+            const response = await UserAPI.login(params);
             if (response) {
-                localStorage.setItem("token", response.value.accessToken);
+                const userId = response.value?.userId;
+                const isUserFavorites = await checkUserFavorites(userId);
+                if (isUserFavorites?.data === true) {
+                    localStorage.setItem("token", response.value?.accessToken);
+                    navigate("/home");
+                } else {
+                    localStorage.setItem("token", response.value?.accessToken);
+                    navigate("/register-favorite");
+                }
+            } else {
+                setIsErrorModal(true);
+                setErrorMessage(response?.response?.data || "Đã xảy ra lỗi nội bộ. Vui lòng thử lại sau...");
             }
-            navigate("/home");
         } catch (err) {
-            console.error("Login Fail");
+            setIsErrorModal(true);
+            setErrorMessage(err?.response?.data || "Đã xảy ra lỗi nội bộ. Vui lòng thử lại sau...");
             console.log(err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Check if user is  registered any favorites 
+    const checkUserFavorites = async (userId) => {
+        try {
+            const response = await UserAPI.checkRegisterFavorite(userId);
+            if (response && response.status === 200) {
+                return response;
+            } else {
+                setIsErrorModal(true);
+                setErrorMessage(response?.response?.data || "Đã xảy ra lỗi nội bộ. Vui lòng thử lại sau...");
+            }
+            return response;
+        } catch (err) {
+            console.log(err);
         }
     }
     return (
@@ -43,11 +72,11 @@ const LoginPage = () => {
                         <form className="space-y-4 md:space-y-6" action="#" onSubmit={handleLogin}>
                             <div>
                                 <label htmlFor="username" className="flex block mb-2 text-sm font-medium text-blue-900 dark:text-white">Username</label>
-                                <input value={username} onChange={(e) => setUsername(e.target.value)} type="username" name="username" id="username" className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Nhập username..." required=""></input>
+                                <input value={username} onChange={(e) => setUsername(e.target.value)} type="username" name="username" id="username" className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Nhập username..." required></input>
                             </div>
                             <div>
                                 <label htmlFor="password" className="flex block mb-2 text-sm font-medium text-blue-900 dark:text-white">Mật khẩu</label>
-                                <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" name="password" id="password" placeholder="••••••••" className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required=""></input>
+                                <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" name="password" id="password" placeholder="••••••••" className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required></input>
                             </div>
                             <div className="flex items-center justify-between">
                                 <a href="#" className="text-sm font-medium text-red-600 hover:underline dark:text-primary-500">Quên mật khẩu?</a>
@@ -73,6 +102,21 @@ const LoginPage = () => {
                     </div>
                 </div>
             </div>
+            {isErrorModal && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-10">
+                    <div className="w-[30%] gap-5 h-auto bg-white rounded-xl">
+                        <div className="w-full flex items-center justify-between p-4">
+                            <h1 className="text-xl font-bold text-red-400">  <span className="fas fa-exclamation-circle text-red-600 mr-2"></span> Đã có lỗi xảy ra.</h1>
+                            <i
+                                onClick={() => setIsErrorModal(false)}
+                                className="fas fa-times text-black-700 mr-2 cursor-pointer"></i>
+                        </div>
+                        <div className="mt-5 p-10">
+                            <p className="text-baseText text-xl">{errorMessage}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </section>
     )
 };

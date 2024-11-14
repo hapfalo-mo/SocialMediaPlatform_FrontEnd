@@ -21,7 +21,7 @@ export const login = async ({ username, password }) => {
 // Signup Function 
 export const signup = async (data) => {
     try {
-        const response = await axios.post("https://localhost:7118/api/User/signup", data, {
+        const response = await axios.post("https://localhost:7118/api/User/create-user", data, {
             headers: {
                 'Content-Type': 'application/json',
             }
@@ -196,6 +196,28 @@ export const createComment = async (data) => {
         return response;
     } catch (err) {
         console.log("Create Comment Fail:", err);
+        throw err;
+    }
+};
+
+// Check Register Favorite 
+export const checkRegisterFavorite = async (userId) => {
+    try {
+        const response = await api.get(`https://localhost:7118/api/User/check-user-have-favorite/${userId}`);
+        return response;
+    } catch (err) {
+        console.log("Check Register Favorite Fail:", err);
+        throw err;
+    }
+};
+
+// Get All Favorite List 
+export const getAllFavorites = async () => {
+    try {
+        const response = await api.get(`https://localhost:7118/api/Favorite/get-all-favorite`);
+        return response;
+    } catch (err) {
+        console.log("Get All Favorite Fail:", err);
         throw err;
     }
 }

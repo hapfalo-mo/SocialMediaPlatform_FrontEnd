@@ -33,7 +33,7 @@ const HomePage = () => {
     const [replyTo, setReplyTo] = useState('');
     const [commentText, setCommentText] = useState('');
     const [ParrentId, setParrentId] = useState(null);
-    const [isCommentMutal, setIsCommentMutal] = useState(false);
+    const [isCommentMutal, setIsCommentMutal] = useState({});
     // Handle Image Change
     const handleImageChange = async (e) => {
         if (e.target.files[0]) {
@@ -391,6 +391,13 @@ const HomePage = () => {
                 : [...prevSelected, favoriteId]
         );
     };
+    // Togggle Comment By PostId 
+    const toggleComment = (postId) => {
+        setIsCommentMutal((prevStatus) => ({
+            ...prevStatus,
+            [postId]: !prevStatus[postId]
+        }));
+    };
     // Save Favorite Of User 
     const saveFavoriteOfUser = async () => {
         try {
@@ -453,11 +460,12 @@ const HomePage = () => {
     const handleReplyClick = (userName, postId) => {
         setParrentId(postId);
         setReplyTo(userName);
-        setCommentText(`@${userName}`); // Set the initial text to include @username
+        setCommentText(`@${userName}`);
     };
 
     //  Render Comments 
     const renderComments = (comments, level = 0) => {
+        console.log("Rendering level:", level, "with comments:", comments);
         return comments.map((comment) => (
             <div key={comment.commentId} style={{ marginLeft: level * 20 + 'px' }} className="w-full flex flex-col gap-3">
                 {/* Each comment */}
@@ -468,9 +476,9 @@ const HomePage = () => {
                         <p>{comment.content}</p>
                         {/* Action Reply + Time */}
                         <div className="flex gap-5 text-baseText">
-                            <span>1 giờ trước</span>
+                            <span>{changeTimeType(comment?.createAt)}</span>
                             <span
-                                onClick={() => handleReplyClick(comment?.userName, comment?.parrentId)}
+                                onClick={() => handleReplyClick(comment?.userName, comment?.commentId)}
                                 className="cursor-pointer hover:text-black hover:font-bold">Trả lời</span>
                         </div>
                     </div>
@@ -681,7 +689,7 @@ const HomePage = () => {
                                         <div className="flex items-center gap-4">
                                             <img src={post?.avatar_Url} alt="" className="w-16 h-16 rounded-full object-cover" />
                                             <div className="flex flex-col items-start">
-                                                <h4 className="font-bold">{post?.fullName || "Nguyen Quoc Huy Chuong"}</h4>
+                                                <h4 className="font-bold">{post?.Username || "Nguyen Quoc Huy Chuong"}</h4>
                                                 <p className="text-baseText">{changeTimeType(post?.createAt)}</p>
                                                 <p className="text-baseText">Nội dung: <span className="text-blue-600 font-bold">{post?.title}</span></p>
                                             </div>
@@ -701,7 +709,7 @@ const HomePage = () => {
                                         <div className=" w-[90%] flex justify-between items-center space-x-4">
                                             <p className="text-baseText">{post?.totalLike} lượt thích</p>
                                             <p
-                                                onClick={() => setIsCommentMutal(!isCommentMutal)}
+                                                onClick={() => toggleComment(post?.postId)}
                                                 className="text-baseText
                                             hover:text-blue-600 cursor-pointer
                                             hover:underline
@@ -730,7 +738,7 @@ const HomePage = () => {
                                         </div>
                                     </div>
                                     {/* Mutual Comment */}
-                                    {isCommentMutal ? (
+                                    {isCommentMutal[post.postId] ? (
                                         commentList[post?.postId]?.length > 0 ? (
                                             <div className="flex flex-col w-full gap-5">
                                                 {renderComments(commentList[post?.postId])}
